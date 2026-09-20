@@ -1,0 +1,3 @@
+import { error } from "@/lib/api/responses";
+export async function PATCH() { return error("NOT_IMPLEMENTED", "Complete Lesson 08", 501); }
+export async function DELETE() { return error("NOT_IMPLEMENTED", "Complete Lesson 08", 501); }

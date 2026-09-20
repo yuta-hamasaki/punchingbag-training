@@ -1,0 +1,250 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole { USER }
+enum Discipline { BOXING KICKBOXING }
+enum Difficulty { BEGINNER INTERMEDIATE ADVANCED }
+enum AccessTier { FREE PREMIUM }
+enum DominantSide { LEFT RIGHT }
+enum SessionMode { STANDARD CAMERA }
+enum SessionStatus { IN_PROGRESS COMPLETED ABANDONED }
+enum SubscriptionStatus { INCOMPLETE INCOMPLETE_EXPIRED TRIALING ACTIVE PAST_DUE CANCELED UNPAID PAUSED }
+enum ConsentType { CAMERA PRIVACY TERMS }
+enum TechniqueType { JAB CROSS HOOK KICK MOVEMENT }
+enum TechniqueSide { LEFT RIGHT }
+
+model User {
+  id             String           @id @default(cuid())
+  clerkUserId    String           @unique
+  email          String           @unique
+  role           UserRole         @default(USER)
+  profile        UserProfile?
+  sessions       WorkoutSession[]
+  favorites      FavoriteWorkout[]
+  customWorkouts CustomWorkout[]
+  subscription   Subscription?
+  consents       UserConsent[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model UserProfile {
+  id                       String       @id @default(cuid())
+  userId                   String       @unique
+  user                     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  discipline               Discipline
+  difficulty               Difficulty
+  weeklyGoal               Int
+  preferredDurationMinutes Int
+  dominantSide             DominantSide
+  voiceCuesEnabled         Boolean      @default(true)
+  onboardingCompletedAt    DateTime?
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @updatedAt
+}
+
+model Workout {
+  id                         String               @id @default(cuid())
+  slug                       String               @unique
+  title                      String
+  description                String
+  discipline                 Discipline
+  difficulty                 Difficulty
+  accessTier                  AccessTier           @default(FREE)
+  durationMinutes            Int
+  roundCount                 Int
+  roundSeconds               Int
+  restSeconds                Int
+  combinationIntervalSeconds Int
+  equipment                  String[]
+  isPublished                Boolean              @default(false)
+  sortOrder                   Int                  @default(0)
+  rounds                     WorkoutRound[]
+  combinations               WorkoutCombination[]
+  sessions                   WorkoutSession[]
+  favorites                  FavoriteWorkout[]
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
+}
+
+model WorkoutRound {
+  id              String               @id @default(cuid())
+  workoutId       String
+  workout         Workout              @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  roundNumber     Int
+  durationSeconds Int
+  restSeconds     Int
+  instructions    String?
+  combinations    WorkoutCombination[]
+  @@unique([workoutId, roundNumber])
+}
+
+model Combination {
+  id       String               @id @default(cuid())
+  slug     String               @unique
+  label    String
+  discipline Discipline
+  steps    Json
+  workouts WorkoutCombination[]
+}
+
+model WorkoutCombination {
+  id            String        @id @default(cuid())
+  workoutId     String
+  workout       Workout       @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  combinationId String
+  combination   Combination   @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+  workoutRoundId String?
+  workoutRound   WorkoutRound? @relation(fields: [workoutRoundId], references: [id], onDelete: Cascade)
+  sequence       Int
+  displaySeconds Int?
+  @@unique([workoutId, combinationId, sequence])
+}
+
+model WorkoutSession {
+  id                   String        @id @default(cuid())
+  userId               String
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workoutId            String?
+  workout              Workout?      @relation(fields: [workoutId], references: [id], onDelete: SetNull)
+  customWorkoutId      String?
+  customWorkout        CustomWorkout? @relation(fields: [customWorkoutId], references: [id], onDelete: SetNull)
+  mode                 SessionMode   @default(STANDARD)
+  status               SessionStatus @default(IN_PROGRESS)
+  startedAt            DateTime
+  endedAt              DateTime?
+  durationSeconds      Int           @default(0)
+  completedRounds      Int           @default(0)
+  totalRounds          Int
+  completionPercentage Float         @default(0)
+  fatigueRating        Int?
+  condition            String?
+  notes                String?
+  detectedPunches      Int?
+  leftPunches          Int?
+  rightPunches         Int?
+  activeSeconds        Int?
+  rounds               SessionRound[]
+  cameraAnalysis       CameraAnalysis?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  @@index([userId, startedAt])
+}
+
+model SessionRound {
+  id              String         @id @default(cuid())
+  sessionId       String
+  session         WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  roundNumber     Int
+  startedAt       DateTime
+  endedAt         DateTime?
+  durationSeconds Int
+  completed       Boolean        @default(false)
+  @@unique([sessionId, roundNumber])
+}
+
+model FavoriteWorkout {
+  userId    String
+  workoutId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workout   Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@id([userId, workoutId])
+}
+
+model CustomWorkout {
+  id                         String               @id @default(cuid())
+  userId                     String
+  user                       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title                      String
+  description                String?
+  discipline                 Discipline
+  difficulty                 Difficulty
+  roundCount                 Int
+  roundSeconds               Int
+  restSeconds                Int
+  combinationIntervalSeconds Int
+  equipment                  String[]
+  rounds                     CustomWorkoutRound[]
+  sessions                   WorkoutSession[]
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime             @updatedAt
+  @@index([userId])
+}
+
+model CustomWorkoutRound {
+  id              String        @id @default(cuid())
+  customWorkoutId String
+  customWorkout   CustomWorkout @relation(fields: [customWorkoutId], references: [id], onDelete: Cascade)
+  roundNumber     Int
+  durationSeconds Int
+  restSeconds     Int
+  instructions    String?
+  combinations    Json
+  @@unique([customWorkoutId, roundNumber])
+}
+
+model Subscription {
+  id                       String             @id @default(cuid())
+  userId                   String             @unique
+  user                     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId         String             @unique
+  stripeSubscriptionId     String?            @unique
+  stripePriceId            String?
+  status                   SubscriptionStatus
+  currentPeriodStart       DateTime?
+  currentPeriodEnd         DateTime?
+  cancelAtPeriodEnd        Boolean            @default(false)
+  canceledAt               DateTime?
+  lastPaymentFailedAt      DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+}
+
+model UserConsent {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      ConsentType
+  version   String
+  granted   Boolean
+  grantedAt DateTime?
+  revokedAt DateTime?
+  metadata  Json?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  @@unique([userId, type, version])
+}
+
+model CameraAnalysis {
+  id                String           @id @default(cuid())
+  sessionId         String           @unique
+  session           WorkoutSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  modelVersion      String
+  processedOnDevice Boolean          @default(true)
+  detectedPunches   Int
+  leftPunches       Int
+  rightPunches      Int
+  activeSeconds     Int
+  startedAt         DateTime
+  endedAt           DateTime
+  events            TechniqueEvent[]
+  createdAt         DateTime         @default(now())
+}
+
+model TechniqueEvent {
+  id               String          @id @default(cuid())
+  cameraAnalysisId String
+  cameraAnalysis   CameraAnalysis  @relation(fields: [cameraAnalysisId], references: [id], onDelete: Cascade)
+  type             TechniqueType
+  timestampMs      Int
+  confidence       Float?
+  side             TechniqueSide?
+  @@index([cameraAnalysisId, timestampMs])
+}
