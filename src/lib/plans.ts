@@ -39,7 +39,8 @@ export const planCatalog: Record<
 // 2. featuresに指定機能が含まれるかを返す
 // 3. UIの表示だけでなく、将来のサーバー認可にも再利用できる純粋関数にする
 export function planHasFeature(_plan: PlanId, _feature: PlanFeature): boolean {
-  return false; /* YOUR CODE HERE */
+  const planDefintion = planCatalog[_plan]
+  return planDefintion.features.includes(_feature);
 }
 
 // TODO(LEARNER:L01-T02)
@@ -48,5 +49,11 @@ export function planHasFeature(_plan: PlanId, _feature: PlanFeature): boolean {
 // 2. 通貨はUSD、localeはen-USにする
 // 3. 小数点以下を常に2桁表示する
 export function formatMonthlyPrice(_priceInCents: number): string {
-  return "$0.00"; /* YOUR CODE HERE */
+  /* YOUR CODE HERE */
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(_priceInCents / 100);
 }

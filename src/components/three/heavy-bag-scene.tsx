@@ -10,7 +10,17 @@ export function HeavyBagScene() {
   // 1. バッグ全体が見えるpositionを指定する
   // 2. 視野角を45〜60度に制限する
   // 3. DPRを1〜2に制限して高密度端末の負荷を抑える
-  const camera = { position: [0, 0, 5] as [number, number, number], fov: 75 }; // YOUR CODE HERE
+  const camera = {
+    position: [0, 0.2, 5] as [number, number, number],
+    fov: 50,
+  };
 
-  return <Canvas camera={camera} dpr={1} shadows><Suspense fallback={null}><ambientLight intensity={0.2} /><HeavyBag /></Suspense></Canvas>;
+  return (
+    <Canvas camera={camera} dpr={[1, 2]} shadows>
+      <Suspense fallback={null}>
+        <ambientLight intensity={0.2} />
+        <HeavyBag />
+      </Suspense>
+    </Canvas>
+  );
 }
